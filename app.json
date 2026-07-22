@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Roadster Relics Mobile",
+    "slug": "roadster-relics-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "roadsterrelics",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#05090C"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.roadsterrelics.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#05090C"
+      },
+      "package": "com.roadsterrelics",
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "95e284d1-34f9-47f0-875d-fc05ab27237b"
+      }
+    },
+    "owner": "roadsterrelics"
+  }
+}

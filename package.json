@@ -1,0 +1,39 @@
+{
+  "name": "roadster-mobile",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "fix:inotify": "bash scripts/fix-linux-inotify.sh",
+    "prestart": "node scripts/ensure-metro-linux-env.cjs",
+    "preandroid": "node scripts/ensure-metro-linux-env.cjs",
+    "preios": "node scripts/ensure-metro-linux-env.cjs",
+    "preweb": "node scripts/ensure-metro-linux-env.cjs",
+    "start": "EXPO_SKIP_METRO_LINUX_GUARD=1 CI=1 expo start",
+    "android": "EXPO_SKIP_METRO_LINUX_GUARD=1 CI=1 expo start --android",
+    "ios": "EXPO_SKIP_METRO_LINUX_GUARD=1 CI=1 expo start --ios",
+    "web": "EXPO_SKIP_METRO_LINUX_GUARD=1 CI=1 expo start --web",
+    "start:watch": "expo start",
+    "web:watch": "expo start --web"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "^3.0.2",
+    "@react-navigation/native": "^7.2.2",
+    "@react-navigation/native-stack": "^7.14.12",
+    "axios": "^1.16.0",
+    "expo": "~54.0.33",
+    "expo-auth-session": "~7.0.11",
+    "expo-status-bar": "~3.0.9",
+    "expo-web-browser": "~15.0.11",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.16.0",
+    "react-native-web": "~0.21.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.0",
+    "typescript": "~5.9.2"
+  },
+  "private": true
+}
