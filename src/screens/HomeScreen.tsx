@@ -25,75 +25,102 @@ type Props = NativeStackScreenProps<AppStackParamList, 'Home'>;
 
 const heroTitleFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
-type Vehicle = { name: string; sub: string; progress: number; image: string };
-const GARAGE: Vehicle[] = [
-  {
-    name: '1967 Mustang',
-    sub: 'Restoration Progress',
-    progress: 0.75,
-    image: 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=320&q=70',
-  },
-  {
-    name: '1984 Yamaha RX100',
-    sub: 'Restoration Progress',
-    progress: 0.4,
-    image: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=320&q=70',
-  },
-];
+const VEHICLE_FALLBACK =
+  'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=320&q=70';
 
-type Post = { author: string; ago: string; text: string; likes: number; comments: number; image: string };
-const COMMUNITY: Post[] = [
-  {
-    author: 'John D.',
-    ago: '2h ago',
-    text: 'John restored his 1972 Beetle',
-    likes: 120,
-    comments: 18,
-    image: 'https://images.unsplash.com/photo-1603386329225-868f9b1ee6c9?auto=format&fit=crop&w=480&q=70',
-  },
-  {
-    author: 'Maria S.',
-    ago: '5h ago',
-    text: 'Sunday drive in the Alfa Romeo',
-    likes: 86,
-    comments: 9,
-    image: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=480&q=70',
-  },
-];
+/** Shape returned by GET /api/garage/me (see GarageScreen). */
+type GarageRow = {
+  id: number;
+  nickname: string | null;
+  custom_year: number | null;
+  custom_make: string | null;
+  custom_model: string | null;
+  photo_url: string | null;
+  vehicle_make?: string | null;
+  vehicle_model?: string | null;
+  year_from?: number | null;
+};
 
-type EventItem = { title: string; date: string; place: string; image: string };
-const EVENTS: EventItem[] = [
-  {
-    title: 'Vintage Rally Delhi',
-    date: '15 June 2026',
-    place: 'New Delhi, India',
-    image: 'https://images.unsplash.com/photo-1469443236989-b8b38c78d6cf?auto=format&fit=crop&w=640&q=70',
-  },
-];
+type Media = { media_url: string; media_type: 'image' | 'video' };
 
-type Listing = { name: string; price: string; image: string };
-const MARKET: Listing[] = [
-  {
-    name: 'Original Carburetor',
-    price: '$350',
-    image: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=320&q=70',
-  },
-  {
-    name: 'Wooden Steering Wheel',
-    price: '$120',
-    image: 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=320&q=70',
-  },
-  {
-    name: 'Vintage Smiths Gauge Set',
-    price: '$180',
-    image: 'https://images.unsplash.com/photo-1530124566582-a618bc2615dc?auto=format&fit=crop&w=320&q=70',
-  },
-  {
-    name: 'Wire Wheel 15 inch',
-    price: '$450',
-    image: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=320&q=70',
-  },
-];
+/** Shape returned by GET /api/social/feed (see CommunityScreen). */
+type FeedPost = {
+  id: number;
+  content: string;
+  author_name: string;
+  created_at: string;
+  like_count: number;
+  comment_count: number;
+  media: Media[];
+};
+
+/** Shape returned by GET /api/events → { events: [...] }. */
+type EventItem = {
+  id: number;
+  title: string;
+  starts_at: string;
+  location_name: string | null;
+  city: string | null;
+  country: string | null;
+};
+
+/** Subset of GET /api/products used for the highlights strip. */
+type Product = {
+  id: number;
+  name: string;
+  price?: number | string | null;
+  image?: string | null;
+};
+
+function vehicleName(v: GarageRow): string {
+  if (v.nickname) return v.nickname;
+  const parts = [
+    v.custom_year ?? v.year_from,
+    v.custom_make ?? v.vehicle_make,
+    v.custom_model ?? v.vehicle_model,
+  ].filter(Boolean);
+  return parts.length ? parts.join(' ') : 'Untitled vehicle';
+}
+
+function vehicleSub(v: GarageRow): string {
+  const parts = [
+    v.custom_year ?? v.year_from,
+    v.custom_make ?? v.vehicle_make,
+    v.custom_model ?? v.vehicle_model,
+  ]
+    .filter(Boolean)
+    .join(' ');
+  return v.nickname && parts ? parts : 'In your garage';
+}
+
+function timeAgo(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (!Number.isFinite(then)) return '';
+  const s = Math.max(1, Math.floor((Date.now() - then) / 1000));
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return d < 7 ? `${d}d ago` : new Date(iso).toLocaleDateString();
+}
+
+function formatPrice(price: Product['price']): string {
+  if (price == null) return 'Price on request';
+  const num = typeof price === 'number' ? price : Number(price);
+  if (!Number.isFinite(num)) return String(price);
+  return `Rs. ${num.toLocaleString('en-IN')}`;
+}
+
+function eventDate(iso: string): string {
+  const d = new Date(iso);
+  return Number.isFinite(d.getTime()) ? d.toLocaleDateString() : '';
+}
+
+function eventPlace(e: EventItem): string {
+  return [e.location_name, e.city, e.country].filter(Boolean).join(', ') || 'Location TBA';
+}
 
 function greetingForNow(): string {
   const h = new Date().getHours();
@@ -119,22 +146,72 @@ export default function HomeScreen({ navigation }: Props) {
   const { token, user } = useSession();
   const [healthy, setHealthy] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
+  const [vehicles, setVehicles] = useState<GarageRow[]>([]);
+  const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [listings, setListings] = useState<Product[]>([]);
 
   const checkHealth = useCallback(async () => {
-    setLoading(true);
     try {
       const { data } = await http.get(API_ENDPOINTS.HEALTH);
       setHealthy(Boolean(data?.ok));
     } catch {
       setHealthy(false);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
+  const loadGarage = useCallback(async () => {
+    if (!token) {
+      setVehicles([]);
+      return;
+    }
+    try {
+      const { data } = await http.get<GarageRow[]>(API_ENDPOINTS.GARAGE_ME);
+      setVehicles(Array.isArray(data) ? data : []);
+    } catch {
+      setVehicles([]);
+    }
+  }, [token]);
+
+  const loadFeed = useCallback(async () => {
+    if (!token) {
+      setPosts([]);
+      return;
+    }
+    try {
+      const { data } = await http.get<FeedPost[]>(API_ENDPOINTS.SOCIAL_FEED, {
+        params: { filter: 'all', limit: 5 },
+      });
+      setPosts(Array.isArray(data) ? data : []);
+    } catch {
+      setPosts([]);
+    }
+  }, [token]);
+
+  const loadPublic = useCallback(async () => {
+    const [e, p] = await Promise.allSettled([
+      http.get<{ events: EventItem[] }>(API_ENDPOINTS.EVENTS, { params: { limit: 3 } }),
+      http.get<unknown>(API_ENDPOINTS.PRODUCTS),
+    ]);
+    if (e.status === 'fulfilled') setEvents(e.value.data?.events ?? []);
+    if (p.status === 'fulfilled') {
+      const raw = p.value.data;
+      const list = Array.isArray(raw)
+        ? (raw as Product[])
+        : ((raw as { products?: Product[] })?.products ?? []);
+      setListings(list);
+    }
+  }, []);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    await Promise.all([checkHealth(), loadGarage(), loadFeed(), loadPublic()]);
+    setLoading(false);
+  }, [checkHealth, loadGarage, loadFeed, loadPublic]);
+
   useEffect(() => {
-    void checkHealth();
-  }, [checkHealth]);
+    void refresh();
+  }, [refresh]);
 
   const firstName = useMemo(
     () => (user?.name ?? user?.email ?? 'Collector').toString().split(/[\s@]/)[0],
@@ -142,10 +219,13 @@ export default function HomeScreen({ navigation }: Props) {
   );
 
   const goProducts = useCallback(() => navigation.navigate('Products'), [navigation]);
+  const goGarage = useCallback(() => navigation.navigate('Garage'), [navigation]);
+  const goCommunity = useCallback(() => navigation.navigate('Community'), [navigation]);
   const goAccount = useCallback(
     () => navigation.navigate(token ? 'Profile' : 'SignIn'),
     [navigation, token],
   );
+  const goSignIn = useCallback(() => navigation.navigate('SignIn'), [navigation]);
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
@@ -158,7 +238,7 @@ export default function HomeScreen({ navigation }: Props) {
           <Text style={styles.brandTitle}>ROADSTER</Text>
           <Text style={styles.brandSub}>— RELICS & AUTO —</Text>
         </View>
-        <Pressable hitSlop={8} onPress={checkHealth} style={styles.headerIconBtn}>
+        <Pressable hitSlop={8} onPress={refresh} style={styles.headerIconBtn}>
           <Text style={styles.headerIcon}>🔔</Text>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>3</Text>
@@ -170,7 +250,7 @@ export default function HomeScreen({ navigation }: Props) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: spacing.lg }}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={checkHealth} tintColor={homePremium.gold} />
+          <RefreshControl refreshing={loading} onRefresh={refresh} tintColor={homePremium.gold} />
         }
       >
         {/* Hero */}
@@ -210,86 +290,111 @@ export default function HomeScreen({ navigation }: Props) {
 
         {/* My Garage */}
         <View style={styles.card}>
-          <SectionHeader title="MY GARAGE" action="View All" onAction={goAccount} />
-          <View style={styles.garageRow}>
-            {GARAGE.map((v) => (
-              <Pressable key={v.name} onPress={goAccount} style={styles.garageCard}>
-                <Image source={{ uri: v.image }} style={styles.garageImg} />
-                <View style={styles.garageBody}>
-                  <Text style={styles.garageName} numberOfLines={1}>{v.name}</Text>
-                  <Text style={styles.garageSub}>{v.sub}</Text>
-                  <Text style={styles.garagePct}>{Math.round(v.progress * 100)}%</Text>
-                  <View style={styles.progressTrack}>
-                    <View style={[styles.progressFill, { width: `${v.progress * 100}%` }]} />
+          <SectionHeader title="MY GARAGE" action="View All" onAction={goGarage} />
+          {!token ? (
+            <Pressable onPress={goSignIn}>
+              <Text style={styles.emptyText}>Sign in to see the vehicles in your garage.</Text>
+            </Pressable>
+          ) : vehicles.length === 0 ? (
+            <Pressable onPress={goGarage}>
+              <Text style={styles.emptyText}>No vehicles yet — add your first build.</Text>
+            </Pressable>
+          ) : (
+            <View style={styles.garageRow}>
+              {vehicles.slice(0, 2).map((v) => (
+                <Pressable key={v.id} onPress={goGarage} style={styles.garageCard}>
+                  <Image source={{ uri: v.photo_url ?? VEHICLE_FALLBACK }} style={styles.garageImg} />
+                  <View style={styles.garageBody}>
+                    <Text style={styles.garageName} numberOfLines={1}>{vehicleName(v)}</Text>
+                    <Text style={styles.garageSub} numberOfLines={1}>{vehicleSub(v)}</Text>
                   </View>
-                </View>
-              </Pressable>
-            ))}
-          </View>
+                </Pressable>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Latest from Community */}
         <View style={styles.section}>
-          <SectionHeader title="LATEST FROM COMMUNITY" action="See All" onAction={goProducts} />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hList}>
-            {COMMUNITY.map((p) => (
-              <View key={p.author} style={styles.postCard}>
-                <Image source={{ uri: p.image }} style={styles.postImg} />
-                <View style={styles.postBody}>
-                  <View style={styles.postAuthorRow}>
-                    <View style={styles.avatar}>
-                      <Text style={styles.avatarText}>{p.author[0]}</Text>
+          <SectionHeader title="LATEST FROM COMMUNITY" action="See All" onAction={goCommunity} />
+          {!token ? (
+            <Pressable onPress={goSignIn}>
+              <Text style={styles.emptyText}>Sign in to see the community feed.</Text>
+            </Pressable>
+          ) : posts.length === 0 ? (
+            <Text style={styles.emptyText}>No posts yet — be the first to share a build.</Text>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hList}>
+              {posts.map((p) => {
+                const image = p.media?.find((m) => m.media_type === 'image')?.media_url;
+                return (
+                  <Pressable key={p.id} onPress={goCommunity} style={styles.postCard}>
+                    {image ? <Image source={{ uri: image }} style={styles.postImg} /> : null}
+                    <View style={styles.postBody}>
+                      <View style={styles.postAuthorRow}>
+                        <View style={styles.avatar}>
+                          <Text style={styles.avatarText}>
+                            {(p.author_name || '?').trim().charAt(0).toUpperCase()}
+                          </Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.postAuthor} numberOfLines={1}>{p.author_name}</Text>
+                          <Text style={styles.postAgo}>{timeAgo(p.created_at)}</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.postText} numberOfLines={2}>{p.content}</Text>
+                      <View style={styles.postMeta}>
+                        <Text style={styles.metaLike}>❤ {p.like_count}</Text>
+                        <Text style={styles.metaComment}>💬 {p.comment_count}</Text>
+                      </View>
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.postAuthor}>{p.author}</Text>
-                      <Text style={styles.postAgo}>{p.ago}</Text>
-                    </View>
-                    <Text style={styles.bookmark}>🔖</Text>
-                  </View>
-                  <Text style={styles.postText} numberOfLines={2}>{p.text}</Text>
-                  <View style={styles.postMeta}>
-                    <Text style={styles.metaLike}>❤ {p.likes}</Text>
-                    <Text style={styles.metaComment}>💬 {p.comments}</Text>
-                  </View>
-                </View>
-              </View>
-            ))}
-          </ScrollView>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          )}
         </View>
 
         {/* Upcoming Events */}
         <View style={styles.section}>
-          <SectionHeader title="UPCOMING EVENTS" action="See All" onAction={goProducts} />
-          {EVENTS.map((e) => (
-            <View key={e.title} style={styles.eventCard}>
-              <Image source={{ uri: e.image }} style={styles.eventImg} />
-              <View style={styles.eventBody}>
-                <Text style={styles.eventTitle}>{e.title}</Text>
-                <Text style={styles.eventMeta}>🗓  {e.date}</Text>
-                <Text style={styles.eventMeta}>📍  {e.place}</Text>
-                <Pressable onPress={goAccount} style={({ pressed }) => [styles.rsvpBtn, pressed && styles.pressed]}>
-                  <Text style={styles.rsvpText}>RSVP</Text>
-                </Pressable>
+          <SectionHeader title="UPCOMING EVENTS" action="See All" onAction={goCommunity} />
+          {events.length === 0 ? (
+            <Text style={styles.emptyText}>No upcoming events right now.</Text>
+          ) : (
+            events.map((e) => (
+              <View key={e.id} style={styles.eventCard}>
+                <View style={styles.eventBody}>
+                  <Text style={styles.eventTitle}>{e.title}</Text>
+                  <Text style={styles.eventMeta}>🗓  {eventDate(e.starts_at)}</Text>
+                  <Text style={styles.eventMeta}>📍  {eventPlace(e)}</Text>
+                  <Pressable onPress={goCommunity} style={({ pressed }) => [styles.rsvpBtn, pressed && styles.pressed]}>
+                    <Text style={styles.rsvpText}>RSVP</Text>
+                  </Pressable>
+                </View>
               </View>
-            </View>
-          ))}
+            ))
+          )}
         </View>
 
         {/* Marketplace Highlights */}
         <View style={styles.section}>
           <SectionHeader title="MARKETPLACE HIGHLIGHTS" action="See All" onAction={goProducts} />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hList}>
-            {MARKET.map((m) => (
-              <Pressable key={m.name} onPress={goProducts} style={styles.listingCard}>
-                <Image source={{ uri: m.image }} style={styles.listingImg} />
-                <Text style={styles.listingName} numberOfLines={2}>{m.name}</Text>
-                <View style={styles.listingFoot}>
-                  <Text style={styles.listingPrice}>{m.price}</Text>
-                  <Text style={styles.heartOutline}>♡</Text>
-                </View>
-              </Pressable>
-            ))}
-          </ScrollView>
+          {listings.length === 0 ? (
+            <Text style={styles.emptyText}>No listings available right now.</Text>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hList}>
+              {listings.slice(0, 6).map((m) => (
+                <Pressable key={m.id} onPress={goProducts} style={styles.listingCard}>
+                  <Image source={{ uri: m.image ?? VEHICLE_FALLBACK }} style={styles.listingImg} />
+                  <Text style={styles.listingName} numberOfLines={2}>{m.name}</Text>
+                  <View style={styles.listingFoot}>
+                    <Text style={styles.listingPrice}>{formatPrice(m.price)}</Text>
+                    <Text style={styles.heartOutline}>♡</Text>
+                  </View>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
         </View>
       </ScrollView>
 
@@ -392,6 +497,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { color: homePremium.zinc100, fontSize: 15, fontWeight: '800', letterSpacing: 1 },
   sectionLink: { color: homePremium.gold, fontSize: 13, fontWeight: '600' },
+  emptyText: { color: homePremium.zinc400, fontSize: 13, paddingVertical: 8 },
 
   /* Garage */
   garageRow: { flexDirection: 'row', gap: 12 },
@@ -409,15 +515,6 @@ const styles = StyleSheet.create({
   garageBody: { flex: 1, justifyContent: 'center' },
   garageName: { color: homePremium.zinc100, fontSize: 13, fontWeight: '700' },
   garageSub: { color: homePremium.zinc400, fontSize: 10, marginTop: 2 },
-  garagePct: { color: homePremium.gold, fontSize: 13, fontWeight: '800', marginTop: 4 },
-  progressTrack: {
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: 'rgba(63,63,70,0.8)',
-    marginTop: 4,
-    overflow: 'hidden',
-  },
-  progressFill: { height: '100%', borderRadius: 3, backgroundColor: homePremium.gold },
 
   /* Horizontal lists */
   hList: { gap: 12, paddingRight: spacing.md },
@@ -445,7 +542,6 @@ const styles = StyleSheet.create({
   avatarText: { color: homePremium.charcoal, fontWeight: '800', fontSize: 14 },
   postAuthor: { color: homePremium.zinc100, fontSize: 13, fontWeight: '700' },
   postAgo: { color: homePremium.zinc400, fontSize: 10 },
-  bookmark: { fontSize: 14 },
   postText: { color: homePremium.zinc100, fontSize: 14, fontWeight: '600' },
   postMeta: { flexDirection: 'row', gap: 16 },
   metaLike: { color: '#f87171', fontSize: 12 },
@@ -459,7 +555,6 @@ const styles = StyleSheet.create({
     borderColor: homePremium.borderZinc,
     backgroundColor: homePremium.panel,
   },
-  eventImg: { width: '100%', height: 150, backgroundColor: '#222' },
   eventBody: { padding: spacing.md, gap: 6 },
   eventTitle: { color: homePremium.zinc100, fontSize: 18, fontWeight: '700', fontFamily: heroTitleFont },
   eventMeta: { color: homePremium.zinc300, fontSize: 13 },
