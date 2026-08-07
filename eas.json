@@ -14,7 +14,7 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://34.131.96.37:8080/api"
+        "EXPO_PUBLIC_API_URL": "https://api.roadsterrelics.com/api"
       }
     }
   },
